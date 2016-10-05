@@ -105,7 +105,7 @@
 
 (let
   [
-   source (str (.readFileSync fs "/home/andrey/example2.js"))
+   source (str (.readFileSync fs "/home/andrey/example1.js"))
    parsed (.parse esprima source)
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
    ;data (update-in data [:body] #(take 6 %))

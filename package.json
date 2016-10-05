@@ -6,6 +6,16 @@
     "node": "0.12.x"
   },
   "dependencies": {
+    "babel": "^6.5.2",
+    "babel-preset-es2015": "^6.16.0",
+    "babel-preset-es2016": "^6.16.0",
+    "babel-preset-es2017": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
+    "babel-preset-stage-0": "^6.16.0",
+    "babel-preset-stage-1": "^6.16.0",
+    "babel-preset-stage-2": "^6.17.0",
+    "babel-preset-stage-3": "^6.17.0",
+    "babylon": "^6.11.4",
     "esprima": "^3.0.0"
   },
   "devDependencies": {
