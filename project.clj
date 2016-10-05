@@ -8,6 +8,7 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [fipp "0.6.6"]
                  [aprint "0.1.3"]
+                 [org.clojure/tools.reader "1.0.0-beta3"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.1"]

@@ -38,7 +38,7 @@
 (defn transform1 [{:keys [type] :as obj}]
   (cond
     (and (= type "Program") (:sourceType obj) "script")
-    (mapcat transform1 (:body obj))
+    (map transform1 (:body obj))
 
     (and (= type "VariableDeclaration") (:kind obj) "var")
     (map transform1 (:declarations obj))
@@ -68,8 +68,8 @@
     (symbol (:name obj))
 
     (and (= type "ObjectExpression"))
-    (into {}
-          (map (fn [nobj]
+    (apply js-obj (map identity
+          (mapcat (fn [nobj]
                  (let [k (cond->
                                     (:key nobj)
 
@@ -84,9 +84,9 @@
                    [k v]
                    )
                  )
-               )
           (:properties obj)
-          )
+               )
+          ))
 
     (and (= type "FunctionExpression") (= (:type (:body obj)) "BlockStatement"))
     (cons 'fn (cons (mapv transform1 (:params obj))
@@ -100,13 +100,26 @@
     (transform1 (:argument obj))
 
     (and (= type "FunctionDeclaration") (= (:type (:body obj)) "BlockStatement") (= (:type (:id obj)) "Identifier"))
-    [(cons 'defn (cons (transform1 (:id obj)) (cons (mapv transform1 (:params obj))
+    (cons 'defn (cons (transform1 (:id obj)) (cons (mapv transform1 (:params obj))
           (transform1 (:body obj))
-          )))]
+          )))
+
+    (and (= type "ExpressionStatement"))
+    [:foo]
+
+    (and (= type "ThisExpression"))
+    [:foo]
+
+    (and (= type "JSXElement"))
+    [:foo]
 
     :else
     (throw (js/Error. (str "Unsupported type " type)))
     )
+  )
+
+(defn transform2 [obj]
+  (transform1 obj)
   )
 
 (let
@@ -122,7 +135,7 @@
   (println)
   (println)
   (try
-    (doseq [expr (transform1 (:program data))]
+    (doseq [expr (transform2 (:program data))]
       (prn expr)
       (println)
       )
