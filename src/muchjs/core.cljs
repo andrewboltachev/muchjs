@@ -2,8 +2,12 @@
   (:refer-clojure :exclude [])
   (:require [cljs.nodejs :as nodejs]
             [fipp.edn :refer [pprint]]
+            [cljs.pprint]
             )
-  ;(:use [aprint.core :only [aprint]])
+  (:use [regexpforobj.core :only [InputChar
+                                  Char Or Seq Star
+                                  grammar_pretty run
+                                  ]])
   )
 
 
@@ -35,13 +39,34 @@
     x)
   )
 
+
+(defn fnbody1 [body]
+  (println "**********************")
+  (cljs.pprint/pprint (-> (map
+         (fn [element] (InputChar (:type element)
+                     (clojure.walk/postwalk #(cond-> %
+                                                       (map? %)
+                                                       (dissoc :loc
+                                                               :start
+                                                               :end)
+                                                       ) element)
+                     ))
+         (:body body))
+           
+           grammar_pretty
+           ))
+  (println "----------------------")
+
+  {:type "Literal" :value "foo"}
+  )
+
 (defn transform1 [{:keys [type] :as obj}]
   (cond
     (and (= type "Program") (:sourceType obj) "script")
     (map transform1 (:body obj))
 
     (and (= type "VariableDeclaration") (:kind obj) "var")
-    (map transform1 (:declarations obj))
+    (mapcat transform1 (:declarations obj))
 
     (and (= type "VariableDeclarator") (= (:type (:id obj)) "Identifier"))
     (list 'def (symbol (:name (:id obj))) (transform1 (:init obj)))
@@ -90,7 +115,7 @@
 
     (and (= type "FunctionExpression") (= (:type (:body obj)) "BlockStatement"))
     (cons 'fn (cons (mapv transform1 (:params obj))
-          (transform1 (:body obj))
+          (transform1 (fnbody1 (:body obj)))
           ))
 
     (and (= type "BlockStatement"))
@@ -101,11 +126,17 @@
 
     (and (= type "FunctionDeclaration") (= (:type (:body obj)) "BlockStatement") (= (:type (:id obj)) "Identifier"))
     (cons 'defn (cons (transform1 (:id obj)) (cons (mapv transform1 (:params obj))
-          (transform1 (:body obj))
+          (transform1 (fnbody1 (:body obj)))
           )))
 
     (and (= type "ExpressionStatement"))
-    [:foo]
+    (transform1 (:expression obj))
+
+    (and (= type "AssignmentExpression"))
+    (list 'set!
+          (transform1 (:left obj))
+          (transform1 (:right obj))
+          )
 
     (and (= type "ThisExpression"))
     [:foo]
@@ -136,7 +167,7 @@
   (println)
   (try
     (doseq [expr (transform2 (:program data))]
-      (prn expr)
+      (cljs.pprint/pprint expr)
       (println)
       )
     (catch js/Error e
