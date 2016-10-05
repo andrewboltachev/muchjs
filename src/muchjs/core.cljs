@@ -236,9 +236,9 @@
   (transform1 obj)
   )
 
+(defn convert [source]
 (let
   [
-   source (str (.readFileSync fs "/home/andrey/example1.js"))
    parsed (.parse babylon source (clj->js {:plugins ["jsx" "flow" "doExpressions" "objectRestSpread" "decorators" "classProperties" "exportExtensions" "asyncGenerators" "functionBind" "functionSent"]}))
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
    ;data (update-in data [:body] #(take 6 %))
@@ -267,9 +267,22 @@
                )
              (:body data)
              ))
+  ))
+
+(let [source
+      "var x = 42;"
+      ]
+  (convert source)
   )
 
-(defn -main []
-  (println "Hello Peter!!"))
+(defn -main [filename]
+  ; ...
+
+   (let [source (str (.readFileSync fs filename))]
+     (convert source)
+     )
+  )
 
 (set! *main-cli-fn* -main)
+
+
