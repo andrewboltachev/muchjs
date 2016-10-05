@@ -1,16 +1,16 @@
-muchjs
-======
+# muchjs
+
 
 Very experimental JavaScript/JSX to ClojureScript converter.
 
 Uses:
 
-* babel as JavaScript parser
-* custom dependency: regexpforobj — library for parsing
+* [babel](https://babeljs.io/) as JavaScript parser
+* custom dependency: [RegExpForObj](https://github.com/andrewboltachev/regexpforobj) — library for parsing
 
 
-Example
-=======
+## Example (taken from awesone [ReactDND](http://gaearon.github.io/react-dnd/) project):
+
 ```jsx
 // Let's make <Card text='Write the docs' /> draggable!
 
@@ -101,4 +101,12 @@ Result:
 (set!
  (.-exports module)
  ((DragSource (.-CARD ItemTypes) cardSource collect) Card))
+```
+
+
+## Running locally
+```
+lein deps
+npm install
+rlwrap lein figwheel
 ```
