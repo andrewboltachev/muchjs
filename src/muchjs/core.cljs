@@ -172,7 +172,7 @@
     (and (= type "BlockStatement"))
     (map transform1 (:body obj))
 
-    (and (= type "ReturnStatement")) ; TODO: "check last"
+    (and (= type "ReturnStatement")) ; TODO: check that return statement is in fact last
     (transform1 (:argument obj))
 
     (and (= type "FunctionDeclaration") (= (:type (:body obj)) "BlockStatement") (= (:type (:id obj)) "Identifier"))
