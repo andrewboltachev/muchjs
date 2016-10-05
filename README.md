@@ -109,4 +109,6 @@ Result:
 lein deps
 npm install
 rlwrap lein figwheel
+# ...on other window:
+node_modules/babel-cli/bin/babel-node.js target/server_dev/muchjs.js example.js
 ```
