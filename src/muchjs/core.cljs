@@ -17,7 +17,7 @@
   )
 
 (def fs (nodejs/require "fs"))
-(def esprima (nodejs/require "babylon"))
+(def babylon (nodejs/require "babylon"))
 
 
 (defn opt1 [x]
@@ -50,6 +50,12 @@
     (opt1 (cons (transform1 (:callee obj)) (map transform1 (:arguments obj))))
 
     (and (= type "Literal"))
+    (:value obj)
+
+    (and (= type "StringLiteral"))
+    (:value obj)
+
+    (and (= type "NumericLiteral"))
     (:value obj)
 
     (and (= type "IdentifierString"))
@@ -105,16 +111,18 @@
 
 (let
   [
-   source (str (.readFileSync fs "/home/andrey/example2.js"))
-   source "var x = 42;"
-   parsed (.parse esprima source)
+   source (str (.readFileSync fs "/home/andrey/example1.js"))
+   parsed (.parse babylon source (clj->js {:plugins ["jsx" "flow" "doExpressions" "objectRestSpread" "decorators" "classProperties" "exportExtensions" "asyncGenerators" "functionBind" "functionSent"]}))
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
    ;data (update-in data [:body] #(take 6 %))
    ]
   (println)
   (println)
+  (prn data)
+  (println)
+  (println)
   (try
-    (doseq [expr (transform1 data)]
+    (doseq [expr (transform1 (:program data))]
       (prn expr)
       (println)
       )
@@ -124,7 +132,7 @@
     )
   (println)
   (println)
-  (prn (sort (apply hash-set (map second (filter #(and (sequential? %) (= :type (first %))) (tree-seq #(or (map? %) (sequential? %)) identity data))))))
+  ;(prn (sort (apply hash-set (map second (filter #(and (sequential? %) (= :type (first %))) (tree-seq #(or (map? %) (sequential? %)) identity data))))))
   #_(prn (into []
              (comp
                (filter #(= (:type %) "VariableDeclaration"))
