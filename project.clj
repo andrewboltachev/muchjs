@@ -5,7 +5,10 @@
   :min-lein-version "2.5.3"
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.170"]]
+                 [org.clojure/clojurescript "1.7.170"]
+                 [fipp "0.6.6"]
+                 [aprint "0.1.3"]
+                 ]
 
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-figwheel "0.5.0-2"]]
