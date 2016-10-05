@@ -87,7 +87,7 @@
             )
             
 
-        r (run g input)
+        r (run g input) ; TODO check for errors (is_parsing_error?)
         r2 (clojure.walk/postwalk
              (fn [x]
                (cond-> x
