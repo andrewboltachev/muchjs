@@ -19,6 +19,22 @@
 (def fs (nodejs/require "fs"))
 (def esprima (nodejs/require "esprima"))
 
+
+(defn opt1 [x]
+  (if (and (list? x)
+           (sequential? x)
+           (sequential? (first x))
+           (symbol? (ffirst x))
+           (= (subs (name (ffirst x)) 0 2) ".-")
+           )
+    (->>
+      (rest x)
+      (cons (second (first x)))
+      (cons (symbol (str "." (subs (name (ffirst x)) 2))))
+      )
+    x)
+  )
+
 (defn transform1 [{:keys [type] :as obj}]
   (cond
     (and (= type "Program") (:sourceType obj) "script")
@@ -30,8 +46,8 @@
     (and (= type "VariableDeclarator") (= (:type (:id obj)) "Identifier"))
     (list 'def (symbol (:name (:id obj))) (transform1 (:init obj)))
 
-    (and (= type "CallExpression") (= (:type (:callee obj)) "Identifier"))
-    (cons (symbol (:name (:callee obj))) (map transform1 (:arguments obj)))
+    (and (= type "CallExpression"))
+    (opt1 (cons (transform1 (:callee obj)) (map transform1 (:arguments obj))))
 
     (and (= type "Literal"))
     (:value obj)
@@ -77,6 +93,11 @@
     (and (= type "ReturnStatement")) ; TODO: "check last"
     (transform1 (:argument obj))
 
+    (and (= type "FunctionDeclaration") (= (:type (:body obj)) "BlockStatement") (= (:type (:id obj)) "Identifier"))
+    [(cons 'defn (cons (transform1 (:id obj)) (cons (mapv transform1 (:params obj))
+          (transform1 (:body obj))
+          )))]
+
     :else
     (throw (js/Error. (str "Unsupported type " type)))
     )
@@ -87,7 +108,7 @@
    source (str (.readFileSync fs "/home/andrey/example2.js"))
    parsed (.parse esprima source)
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
-   data (update-in data [:body] #(take 5 %))
+   ;data (update-in data [:body] #(take 6 %))
    ]
   (println)
   (println)
