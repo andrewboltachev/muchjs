@@ -13,6 +13,9 @@
 
 (def ^:dynamic *display-function-forms* false)
 
+
+(defonce last-source (atom nil))
+
 (nodejs/enable-util-print!)
 
 (defn iprint [x]
@@ -269,8 +272,8 @@
              ))
   ))
 
-(let [source
-      "var x = 42;"
+(when-let [source
+      @last-source
       ]
   (convert source)
   )
@@ -279,6 +282,7 @@
   ; ...
 
    (let [source (str (.readFileSync fs filename))]
+     (reset! last-source source)
      (convert source)
      )
   )
