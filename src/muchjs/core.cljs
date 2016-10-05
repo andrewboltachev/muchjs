@@ -6,10 +6,12 @@
             )
   (:use [regexpforobj.core :only [InputChar
                                   Char Or Seq Star
-                                  grammar_pretty run
+                                  grammar_pretty run is_parsing_error?
                                   ]])
   )
 
+
+(def ^:dynamic *display-function-forms* false)
 
 (nodejs/enable-util-print!)
 
@@ -39,10 +41,11 @@
     x)
   )
 
+(declare transform1)
+
 
 (defn fnbody1 [body]
-  (println "**********************")
-  (cljs.pprint/pprint (-> (map
+  (let [input (map
          (fn [element] (InputChar (:type element)
                      (clojure.walk/postwalk #(cond-> %
                                                        (map? %)
@@ -52,12 +55,60 @@
                                                        ) element)
                      ))
          (:body body))
+        g (Seq
+            [
+             (Star (Char "VariableDeclaration"))
+             (Char "ReturnStatement"
+                  (fn [x]
+                    (transform1 (:payload (:value x)))
+                    )
+                  )
+             ]
+              (fn [x]
+                (let [[exprs ret] (:value x)
+
+                      ret (transform1 (:payload ret))
+                      
+                      exprs (map (comp
+                                   #(get-in % [:declarations 0])
+                                   :payload)
+                                 (:value exprs))
+                  exprs (vec (mapcat
+                               (fn [e]
+                                 [(transform1 (:id e)) (transform1 (:init e))]
+                                 )
+                               exprs
+                               ))
+                      ]
+                      (if (empty? exprs) ret (list 'let exprs ret))
+                  
+                  )
+                )
+            )
+            
+
+        r (run g input)
+        r2 (clojure.walk/postwalk
+             (fn [x]
+               (cond-> x
+                 (and (map? x) (or (fn? (:payload x)) (keyword? (:payload x))))
+                 ((:payload x) (:value x))
+                 )
+               )
+             r
+             )
+        ]
+    (when *display-function-forms*
+  (println "**********************")
+  (cljs.pprint/pprint (-> input
            
            grammar_pretty
            ))
   (println "----------------------")
+      )
 
-  {:type "Literal" :value "foo"}
+    (list r2)
+    )
   )
 
 (defn transform1 [{:keys [type] :as obj}]
@@ -115,7 +166,7 @@
 
     (and (= type "FunctionExpression") (= (:type (:body obj)) "BlockStatement"))
     (cons 'fn (cons (mapv transform1 (:params obj))
-          (transform1 (fnbody1 (:body obj)))
+          (fnbody1 (:body obj))
           ))
 
     (and (= type "BlockStatement"))
@@ -126,7 +177,7 @@
 
     (and (= type "FunctionDeclaration") (= (:type (:body obj)) "BlockStatement") (= (:type (:id obj)) "Identifier"))
     (cons 'defn (cons (transform1 (:id obj)) (cons (mapv transform1 (:params obj))
-          (transform1 (fnbody1 (:body obj)))
+          (fnbody1 (:body obj))
           )))
 
     (and (= type "ExpressionStatement"))
@@ -139,10 +190,42 @@
           )
 
     (and (= type "ThisExpression"))
-    [:foo]
+    (do
+      'this
+      )
 
     (and (= type "JSXElement"))
-    [:foo]
+    (vec (->>
+      (map
+        transform1
+        (:children obj)
+        )
+      (cons
+        (into {}
+          (map (fn [a]
+                 [(keyword (transform1 (:name a))) (transform1 (:value a))]
+                 )
+               (-> obj :openingElement :attributes)
+               )
+          )
+        )
+      (cons (keyword (get-in obj [:openingElement :name :name])))
+      ))
+
+    (and (= type "JSXText"))
+    (:value obj)
+
+    (and (= type "JSXExpressionContainer"))
+    (transform1 (:expression obj))
+
+    (and (= type "JSXIdentifier"))
+    (:name obj)
+
+    (and (= type "ConditionalExpression"))
+    (list 'if (transform1 (:test obj))
+              (transform1 (:consequent obj))
+              (transform1 (:alternate obj))
+          )
 
     :else
     (throw (js/Error. (str "Unsupported type " type)))
@@ -160,9 +243,9 @@
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
    ;data (update-in data [:body] #(take 6 %))
    ]
-  (println)
-  (println)
-  (prn data)
+  ;(println)
+  ;(println)
+  ;(prn data)
   (println)
   (println)
   (try
