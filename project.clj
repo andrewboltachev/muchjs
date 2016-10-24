@@ -20,6 +20,10 @@
   :clean-targets ["server.js"
                   "target"]
 
+  :figwheel {
+    :server-port 5377          ;; default is 3449
+  }
+
   :cljsbuild {
     :builds [{:id "dev"
               :source-paths ["src"]

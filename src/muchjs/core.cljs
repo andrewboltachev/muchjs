@@ -114,9 +114,19 @@
     )
   )
 
+(defn drop-loc-info [tree]
+  (clojure.walk/postwalk
+    (fn [node]
+      (if (map? node)
+        (dissoc node :loc :start :end)
+        node)
+      )
+    tree)
+  )
+
 (defn transform1 [{:keys [type] :as obj}]
   (cond
-    (and (= type "Program") (:sourceType obj) "script")
+    (and (= type "Program") (= (:sourceType obj) "module"))
     (map transform1 (:body obj))
 
     (and (= type "VariableDeclaration") (:kind obj) "var")
@@ -230,8 +240,19 @@
               (transform1 (:alternate obj))
           )
 
+    #_(and (= type "ImportDeclaration"))
+    #_(list 'if (transform1 (:test obj))
+              (transform1 (:consequent obj))
+              (transform1 (:alternate obj))
+          )
+
     :else
-    (throw (js/Error. (str "Unsupported type " type)))
+    (do
+      (cljs.pprint/pprint
+        (drop-loc-info
+         obj))
+      (throw (js/Error. (str "Unsupported type " (pr-str obj))))
+      )
     )
   )
 
@@ -242,7 +263,9 @@
 (defn convert [source]
 (let
   [
-   parsed (.parse babylon source (clj->js {:plugins ["jsx" "flow" "doExpressions" "objectRestSpread" "decorators" "classProperties" "exportExtensions" "asyncGenerators" "functionBind" "functionSent"]}))
+   parsed (.parse babylon source (clj->js {:plugins ["jsx" "flow" "doExpressions" "objectRestSpread" "decorators" "classProperties" "exportExtensions" "asyncGenerators" "functionBind" "functionSent"]
+                                           :sourceType "module" ; TODO guess
+                                           }))
    data (js->clj (js/JSON.parse (js/JSON.stringify parsed)) :keywordize-keys true)
    ;data (update-in data [:body] #(take 6 %))
    ]
