@@ -251,7 +251,7 @@
       (cljs.pprint/pprint
         (drop-loc-info
          obj))
-      (throw (js/Error. (str "Unsupported type " (pr-str obj))))
+      (throw (js/Error. (str "Unsupported type: " type)))
       )
     )
   )
