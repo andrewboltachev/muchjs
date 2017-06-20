@@ -91,6 +91,9 @@
             
 
         r (run g input) ; TODO check for errors (is_parsing_error?)
+        ;_ (when (is_parsing_error? r)
+        ;    (println "is_parsing_error" g input)
+        ;    )
         r2 (clojure.walk/postwalk
              (fn [x]
                (cond-> x
@@ -100,6 +103,11 @@
                )
              r
              )
+        r2 (if (is_parsing_error? r)
+             (if (sequential? body)
+               (map transform1 body)
+               (transform1 body))
+             r2)
         ]
     (when *display-function-forms*
   (println "**********************")
@@ -149,6 +157,17 @@
 
     (and (= type "IdentifierString"))
     (:name obj)
+
+    (and (= type "TemplateLiteral"))
+    (let [stuff (interleave
+                  (map #(-> % :value :raw) (:quasis obj))
+                  (map transform1
+                    (conj (:expressions obj) nil))
+                  )
+          ]
+      (cons 'str (filter #(and
+                            (some? %)
+                            (not= "" %)) stuff)))
 
     (and (= type "MemberExpression") (= (:type (:property obj)) "Identifier"))
     (list (symbol (str ".-" (:name (:property obj)))) (transform1 (:object obj)))
