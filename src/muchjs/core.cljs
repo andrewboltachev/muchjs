@@ -179,7 +179,8 @@
 
     (and (= type "FunctionExpression") (= (:type (:body obj)) "BlockStatement"))
     (cons 'fn (cons (mapv transform1 (:params obj))
-          (fnbody1 (:body obj))
+                    (list (list 'this-as 'this 
+          (first (fnbody1 (:body obj)))))
           ))
 
     (and (= type "BlockStatement"))
@@ -206,6 +207,8 @@
     (do
       'this
       )
+    (or (and (= type "NullLiteral")) (nil? obj))
+    nil
 
     (and (= type "JSXElement"))
     (vec (->>
@@ -251,7 +254,7 @@
       (cljs.pprint/pprint
         (drop-loc-info
          obj))
-      (throw (js/Error. (str "Unsupported type: " type)))
+      (throw (js/Error. (str "Unsupported type: " (pr-str type))))
       )
     )
   )
@@ -261,6 +264,7 @@
   )
 
 (defn convert [source]
+  (binding [cljs.pprint/*print-right-margin* 120]
 (let
   [
    parsed (.parse babylon source (clj->js {:plugins ["jsx" "flow" "doExpressions" "objectRestSpread" "decorators" "classProperties" "exportExtensions" "asyncGenerators" "functionBind" "functionSent"]
@@ -293,7 +297,7 @@
                )
              (:body data)
              ))
-  ))
+  )))
 
 (when-let [source
       @last-source
