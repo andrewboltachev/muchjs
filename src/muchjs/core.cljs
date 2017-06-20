@@ -156,6 +156,13 @@
     (and (= type "Identifier"))
     (symbol (:name obj))
 
+    (and (= type "ArrayExpression"))
+    (cons 'clj->js [ (mapv identity
+          (map transform1 
+          (:elements obj)
+               )
+          )])
+
     (and (= type "ObjectExpression"))
     (apply js-obj (map identity
           (mapcat (fn [nobj]
@@ -183,6 +190,36 @@
           (first (fnbody1 (:body obj)))))
           ))
 
+    (and (= type "ArrowFunctionExpression"))
+    (let [params
+          (into []
+                (comp
+                  (map-indexed list)
+                  (map
+                    (fn [[i param]]
+                      (cond
+                        (= (:type param) "ObjectPattern")
+                        (let [its-symbol (symbol (str "__obj" i))]
+                          {:param its-symbol
+                           :let (map
+                                  (fn [p]
+                                    [(transform1 (:key p))
+                                     (list
+                                       (symbol
+                                         (str
+                                           ".-"
+                                           (name (transform1 (:value p)))))
+                                       its-symbol
+                                       )])
+                                  (:properties param))})
+                        :else
+                        {:param (transform1 param)}))))
+                (:params obj))]
+      (cons 'fn (cons (mapv :param params)
+
+                      (list (list 'let (vec (mapcat identity (mapcat :let params)))
+            (first (fnbody1 (:body obj))))))))
+
     (and (= type "BlockStatement"))
     (map transform1 (:body obj))
 
@@ -202,6 +239,16 @@
           (transform1 (:left obj))
           (transform1 (:right obj))
           )
+
+    (and (= type "LogicalExpression"))
+    (list (get {"&&" 'and "||" 'or} (:operator obj))
+          (transform1 (:left obj))
+          (transform1 (:right obj)))
+
+    (and (= type "SequenceExpression"))
+    (apply
+      list 
+          (map transform1 (:expressions obj)))
 
     (and (= type "ThisExpression"))
     (do
